@@ -45,15 +45,16 @@ class YoutubeCollector:
             })
         return videos
     
-    def save(self,videos):
-        dir=Path("../../data/raw")
+    def save(self,data):
+        BASE_DIR = Path(__file__).resolve().parent
+        dir=(BASE_DIR.parent.parent/"data"/"raw")
         dir.mkdir(parents=True, exist_ok=True)
-        filename = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S-youtube.json")
+        filename = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S-scraper.json")
 
         filepath=dir/filename
 
         with open(filepath,"w",encoding="utf-8") as f:
-            json.dump(videos,f,indent=4)
+            json.dump(data,f,indent=4)
 
 if __name__=="__main__":
     collector=YoutubeCollector()

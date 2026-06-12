@@ -40,15 +40,16 @@ class RedditCollector:
                 })
         return posts
     
-    def save(self,posts):
-        dir=Path("../../data/raw")
+    def save(self,data):
+        BASE_DIR = Path(__file__).resolve().parent
+        dir=(BASE_DIR.parent.parent/"data"/"raw")
         dir.mkdir(parents=True, exist_ok=True)
-        filename = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S-reddit.json")
+        filename = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S-scraper.json")
 
         filepath=dir/filename
 
         with open(filepath,"w",encoding="utf-8") as f:
-            json.dump(posts,f,indent=4)
+            json.dump(data,f,indent=4)
 
 
 if __name__=="__main__":
