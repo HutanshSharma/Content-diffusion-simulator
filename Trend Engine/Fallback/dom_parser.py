@@ -83,11 +83,6 @@ class DocumentEncoder:
                     "comments":comments
                 })
         return output
-        
-
-    def youtube_extractor(self, soup):
-        pass
-
 
     def save(self,data,name):
         BASE_DIR = Path(__file__).resolve().parent

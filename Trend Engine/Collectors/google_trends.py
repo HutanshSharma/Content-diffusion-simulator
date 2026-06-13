@@ -1,161 +1,134 @@
-# import json
-# from pathlib import Path
-# from pytrends.request import TrendReq
-# import feedparser
-# from datetime import datetime, UTC
-
-# class GoogleTrendsCollector:
-#     def __init__(self, region: str = "US", language: str = "en-US"):
-#         self.region = region
-#         self.language = language
-#         self.pytrends = TrendReq(hl=self.language, tz=0)
-    
-#     def collect(self) -> list[dict]:
-#         extraction_time = datetime.now(UTC).strftime("%Y-%m-%d_%H.%M.%S")
-#         posts = []
- 
-#         feeds = [
-#             ("realtime", self._collect_realtime()),
-#             # ("daily",    self._collect_daily()),
-#         ]
-
-#         for feed_name, items in feeds:
-#             for item in items:
-#                 item.update({
-#                     "source":        "google_trends",
-#                     "region":        self.region,
-#                     "feed":          feed_name,
-#                     "extracted_utc": extraction_time,
-#                 })
-#                 posts.append(item)
- 
-#         return posts
-    
-#     def _collect_realtime(self) -> list[dict]:
-#         """Realtime trending searches (returns ~25 stories)."""
-#         results = []
-#         try:
-#             df = self.pytrends.realtime_trending_searches(pn=self.region)
-#             for _, row in df.iterrows():
-#                 results.append({
-#                     "id":          str(row.get("id", "")),
-#                     "title":       row.get("title", ""),
-#                     "articles":    row.get("articles", []),
-#                     "image":       row.get("image", {}).get("imageUrl", "") if isinstance(row.get("image"), dict) else "",
-#                     "created_utc": "",          # not provided by realtime feed
-#                     "traffic":     row.get("formattedTraffic", ""),
-#                 })
-#         except Exception as e:
-#             print(f"[GoogleTrendsCollector] realtime feed error: {e}")
-#         return results
-    
-#     def _collect_daily(self):
-
-#         url = f"https://trends.google.com/trends/trendingsearches/daily/rss?geo={self.region}"
-
-#         feed = feedparser.parse(url)
-
-#         results = []
-
-#         for entry in feed.entries:
-#             results.append({
-#                 "id": "",
-#                 "title": entry.title,
-#                 "articles": [],
-#                 "image": "",
-#                 "created_utc": "",
-#                 "traffic": ""
-#             })
-
-#         return results
-    
-#     def save(self, posts: list[dict]) -> None:
-#         dir = Path("../../data/raw")
-#         dir.mkdir(parents=True, exist_ok=True)
-#         filename = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S-google_trends.json")
-#         filepath = dir / filename
-#         with open(filepath, "w", encoding="utf-8") as f:
-#             json.dump(posts, f, indent=4)
-#         print(f"[GoogleTrendsCollector] Saved {len(posts)} items → {filepath}")
-
-# if __name__ == "__main__":
-#     collector = GoogleTrendsCollector(region="IN")
-#     posts = collector.collect()
-#     collector.save(posts)
-
-
-
 import json
 from pathlib import Path
+from time import sleep
 from datetime import datetime, UTC
-
-import feedparser
+import pandas as pd
+import shutil
+from selenium.webdriver.common.by import By
+from Fallback.scraper import build_driver
+import hashlib
 
 
 class GoogleTrendsCollector:
-    def __init__(self, region="IN"):
-        self.region = region
+    def __init__(self):
+        self.base_dir = Path(__file__).resolve().parent
+        self.temp_dir = (self.base_dir.parent.parent/ "data"/ "temp")
+        self.temp_dir.mkdir(parents=True,exist_ok=True)
 
-    def _collect_daily(self):
-        url = f"https://trends.google.com/trending/rss?geo={self.region}"
+    def save(self, data):
+        raw_dir = (self.base_dir.parent.parent/ "data"/ "raw")
+        raw_dir.mkdir(parents=True,exist_ok=True)
+        filename = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S-google-trends.json")
 
-        feed = feedparser.parse(url)
+        filepath = raw_dir / filename
 
-        results = []
+        with open(filepath,"w",encoding="utf-8") as f:
+            json.dump(data,f,indent=4,ensure_ascii=False)
+    
+    @staticmethod
+    def parse_search_volume(value):
+        if pd.isna(value) or value == "":
+            return ""
+        value = str(value).strip().upper().replace("+", "")
 
-        for entry in feed.entries:
-            results.append({
-                "id": "",
-                "title": entry.title,
-                "articles": [],
-                "image": "",
-                "created_utc": "",
-                "traffic": "",
-            })
+        multipliers = {
+            "K": 1_000,
+            "M": 1_000_000,
+            "B": 1_000_000_000,
+        }
+        suffix = value[-1]
 
-        print(f"[GoogleTrendsCollector] Collected {len(results)} trends")
+        if suffix in multipliers:
+            try:
+                return int(float(value[:-1]) * multipliers[suffix])
+            except ValueError:
+                return value
+        try:
+            return int(value)
+        except ValueError:
+            return value
+        
+    @staticmethod
+    def parse_datetime(value):
+        if pd.isna(value) or value == "":
+            return ""
+        try:
+            dt = datetime.strptime(value,"%B %d, %Y at %I:%M:%S %p UTC%z")
+            return dt.strftime("%Y-%m-%d_%H.%M.%S")
+        except Exception:
+            return value
+        
+    @staticmethod
+    def generate_id(row):
+        seed = (f"{row.get('Trends', '')}|"f"{row.get('Started', '')}|")
+        return hashlib.sha256(
+            seed.encode("utf-8")
+        ).hexdigest()
 
-        return results
-
-    def collect(self):
+    def collect(self,region="IN"):
+        driver = build_driver(download_dir=str(self.temp_dir))
         extraction_time = datetime.now(UTC).strftime("%Y-%m-%d_%H.%M.%S")
 
-        posts = []
+        try:
+            driver.get(f"https://trends.google.com/trending?geo={region}")
+            sleep(10)
 
-        for item in self._collect_daily():
-            item.update({
-                "source": "google_trends",
-                "region": self.region,
-                "feed": "daily",
-                "extracted_utc": extraction_time,
-            })
+            export_buttons = driver.find_elements(By.CSS_SELECTOR,'button[aria-label="Export"]')
+            export_button = export_buttons[0]
+            driver.execute_script(
+                "arguments[0].click();",
+                export_button
+            )
+            sleep(2)
 
-            posts.append(item)
+            csv_buttons = driver.find_elements(By.CSS_SELECTOR,'li[data-action="csv"]')
 
-        return posts
+            if not csv_buttons:
+                raise RuntimeError("Could not find Download CSV menu item.")
 
-    def save(self, posts):
-        BASE_DIR = Path(__file__).resolve().parents[2]
-        output_dir = BASE_DIR / "data" / "raw"
-        output_dir.mkdir(parents=True, exist_ok=True)      
+            driver.execute_script("arguments[0].click();",csv_buttons[0])
+            sleep(10)
 
-        filename = datetime.now(UTC).strftime(
-            "%Y-%m-%d_%H-%M-%S-google_trends.json"
-        )
+            csv_files = sorted(
+                self.temp_dir.glob("*.csv"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
 
-        filepath = output_dir / filename
+            if not csv_files:
+                raise RuntimeError("No CSV file found in temp directory.")
 
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(posts, f, indent=4)
+            csv_path = csv_files[0]
 
-        print(
-            f"[GoogleTrendsCollector] Saved {len(posts)} items → {filepath}"
-        )
+            df = pd.read_csv(csv_path)
+            df = df.where(pd.notna(df), "")
 
+            if "Search volume" in df.columns:
+                df["Search volume"] = df["Search volume"].apply(self.parse_search_volume)
+
+            if "Started" in df.columns:
+                df["Started"] = df["Started"].apply(self.parse_datetime)
+
+            if "Ended" in df.columns:
+                df["Ended"] = df["Ended"].apply(self.parse_datetime)
+
+            df["region"] = region
+            df["source"] = "google_trends"
+            df["extraction_time"] = extraction_time
+            df.insert(0,"id",df.apply(self.generate_id,axis=1))
+            data = df.to_dict(orient="records")
+            shutil.rmtree(self.temp_dir,ignore_errors=True)
+            self.save(data)
+            return data
+        
+        finally:
+            driver.quit()
 
 if __name__ == "__main__":
-    collector = GoogleTrendsCollector(region="IN")
+    collector = GoogleTrendsCollector()
 
-    posts = collector.collect()
+    try:
+        data = collector.collect()
 
-    collector.save(posts)
+    except Exception as e:
+        raise

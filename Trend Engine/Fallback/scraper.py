@@ -28,7 +28,7 @@ def _get_cache(key, ttl_seconds):
 def _set_cache(key, value):
   _CACHE[key] = (time.time(), value)
 
-def build_driver():
+def build_driver(download_dir=None):
     options = Options()
     options.add_argument("--headless=new")
     options.add_argument("--window-size=1920,1080")
@@ -42,7 +42,28 @@ def build_driver():
         "Chrome/137.0.0.0 Safari/537.36"
     )
 
+    if download_dir:
+        prefs = {
+            "download.default_directory": str(download_dir),
+            "download.prompt_for_download": False,
+            "download.directory_upgrade": True,
+            "safebrowsing.enabled": True,
+        }
+
+        options.add_experimental_option(
+            "prefs",
+            prefs
+        )
+
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    if download_dir:
+        driver.execute_cdp_cmd(
+            "Page.setDownloadBehavior",
+            {
+                "behavior": "allow",
+                "downloadPath": str(download_dir),
+            },
+        )
 
     try:
         driver.execute_cdp_cmd(
