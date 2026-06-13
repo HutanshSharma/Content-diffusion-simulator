@@ -41,7 +41,7 @@ class YoutubeCollector:
                 "views":stats.get("viewCount",0),
                 "likes":stats.get("likeCount",0),
                 "comments":stats.get("commentCount",0),
-                "extracted_at":extraction_time
+                "extracted_utc":extraction_time
             })
         return videos
     
@@ -49,7 +49,8 @@ class YoutubeCollector:
         BASE_DIR = Path(__file__).resolve().parent
         dir=(BASE_DIR.parent.parent/"data"/"raw")
         dir.mkdir(parents=True, exist_ok=True)
-        filename = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S-youtube.json")
+        # filename = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S-youtube.json")
+        filename = datetime.now(UTC).strftime("youtube.json")
 
         filepath=dir/filename
 
