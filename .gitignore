@@ -1,6 +1,7 @@
 .env
 data
 __pycache__
+*.json
 
 #virtual environment
 env

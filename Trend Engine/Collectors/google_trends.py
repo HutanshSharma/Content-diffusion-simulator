@@ -18,7 +18,8 @@ class GoogleTrendsCollector:
     def save(self, data):
         raw_dir = (self.base_dir.parent.parent/ "data"/ "raw")
         raw_dir.mkdir(parents=True,exist_ok=True)
-        filename = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S-google-trends.json")
+        # filename = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S-google-trends.json")
+        filename = datetime.now(UTC).strftime("google-trends.json")
 
         filepath = raw_dir / filename
 
@@ -114,7 +115,7 @@ class GoogleTrendsCollector:
 
             df["region"] = region
             df["source"] = "google_trends"
-            df["extraction_time"] = extraction_time
+            df["extraction_utc"] = extraction_time
             df.insert(0,"id",df.apply(self.generate_id,axis=1))
             data = df.to_dict(orient="records")
             shutil.rmtree(self.temp_dir,ignore_errors=True)

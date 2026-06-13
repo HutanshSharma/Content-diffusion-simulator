@@ -47,7 +47,8 @@ class RedditCollector:
         BASE_DIR = Path(__file__).resolve().parent
         dir=(BASE_DIR.parent.parent/"data"/"raw")
         dir.mkdir(parents=True, exist_ok=True)
-        filename = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S-reddit.json")
+        # filename = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S-reddit.json")
+        filename = datetime.now(UTC).strftime("reddit.json")
 
         filepath=dir/filename
 
