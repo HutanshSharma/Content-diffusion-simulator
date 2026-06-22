@@ -2,7 +2,7 @@ import json
 import sqlite3
 import secrets
 from pathlib import Path
-from datetime import datetime, UTC
+from datetime import datetime, timedelta, UTC
 from contextlib import contextmanager
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "api.db"
@@ -42,6 +42,7 @@ def init_db() -> None:
             )
             """
         )
+    purge_states()
 
 def save_token(user_id: str, platform: str, token: dict) -> None:
     with _connect() as conn:
@@ -65,6 +66,7 @@ def get_token(user_id: str, platform: str) -> dict | None:
     return json.loads(row["token_json"]) if row else None
 
 def create_state(user_id: str, platform: str) -> str:
+    purge_states()
     state = secrets.token_urlsafe(32)
     with _connect() as conn:
         conn.execute(
@@ -83,3 +85,12 @@ def consume_state(state: str) -> tuple[str, str] | None:
             return None
         conn.execute("DELETE FROM oauth_states WHERE state = ?", (state,))
     return row["user_id"], row["platform"]
+
+
+def purge_states(max_age_minutes: int = 10) -> int:
+    cutoff = (datetime.now(UTC) - timedelta(minutes=max_age_minutes)).isoformat()
+    with _connect() as conn:
+        cur = conn.execute(
+            "DELETE FROM oauth_states WHERE created_at < ?", (cutoff,)
+        )
+        return cur.rowcount
