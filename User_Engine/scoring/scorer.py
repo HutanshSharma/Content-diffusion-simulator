@@ -102,7 +102,7 @@ def _calc_consistency(values: list[float]) -> float:
     if mean == 0:
         return 0.0
     variance = sum((v - mean) ** 2 for v in values) / len(values)
-    cv = (variance ** 0.5) / mean  # coefficient of variation
+    cv = (variance ** 0.5) / mean  # coefficient of variation ( standard variation / mean )
     return _clamp(1 - cv, 0.0, 1.0)
 
 

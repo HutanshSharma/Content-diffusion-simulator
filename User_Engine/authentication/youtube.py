@@ -42,7 +42,7 @@ def yt_get_auth_url(state: str) -> str:
         include_granted_scopes="true",
         state=state,
     )
-    _flow_store[state] = flow  # store flow
+    _flow_store[state] = flow
     return auth_url
 
 def yt_exchange_code(code: str, state: str) -> dict:
@@ -51,7 +51,7 @@ def yt_exchange_code(code: str, state: str) -> dict:
     return json.loads(flow.credentials.to_json())
 
 def yt_credentials_from_token(token: dict) -> tuple[Credentials | None, dict]:
-    """Rebuild Credentials from a stored token dict, refreshing if expired.
+    """Rebuild Credentials from a stored token, refreshing if expired.
     Returns (creds_or_None, token_dict_to_persist). The token dict is returned
     (possibly refreshed) so the caller can write the new access token back.
     """

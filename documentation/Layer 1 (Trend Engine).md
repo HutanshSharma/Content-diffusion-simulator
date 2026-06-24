@@ -32,7 +32,7 @@ Store Result
 
 This approach has several limitations:
 
-### No Historical Context
+## No Historical Context
 
 Example:
 
@@ -50,9 +50,7 @@ A traditional pipeline treats these independently.
 
 There is no mechanism for Day 10 information to improve Day 1 understanding.
 
----
-
-### Poor Entity Resolution
+## Poor Entity Resolution
 
 Example:
 
@@ -68,9 +66,8 @@ Possible meanings:
 
 Without surrounding context, selecting the correct meaning becomes difficult.
 
----
 
-### Weak Categorization
+## Weak Categorization
 
 A single entity description often lacks enough information to determine accurate tags.
 
@@ -162,7 +159,7 @@ flowchart LR
     classDef dark fill:#666666,color:#ffffff,stroke:#333333,stroke-width:2px
 ```
 
-### Fallback Collection
+## Fallback Collection
 
 To improve reliability, the system includes lightweight fallback collectors for Reddit and Google Trends.
 
@@ -217,7 +214,6 @@ The output of this stage is not a final entity.
 
 Instead, every extracted concept is converted into a set of possible Wikidata candidates which will later be disambiguated using graph context.
 
----
 
 ## Processing Workflow
 
@@ -253,25 +249,23 @@ flowchart TD
     classDef dark fill:#666666,color:#ffffff,stroke:#333333,stroke-width:2px
 ```
 
----
-
-## Step 1: Text Construction
+### Step 1: Text Construction
 
 Each source uses a dedicated text builder.
 
-### Reddit
+#### Reddit
 
 ```text
 Title + Post Description
 ```
 
-### YouTube
+#### YouTube
 
 ```text
 Video Title + Description
 ```
 
-### Google Trends
+#### Google Trends
 
 ```text
 Trend + Trend Breakdown
@@ -279,9 +273,7 @@ Trend + Trend Breakdown
 
 This creates a unified text representation regardless of source.
 
----
-
-## Step 2: Concept Extraction (SpaCy)
+### Step 2: Concept Extraction (SpaCy)
 
 The first stage uses SpaCy's Named Entity Recognition model.
 
@@ -314,9 +306,8 @@ CARDINAL
 
 These rarely contribute useful trend information.
 
----
 
-### Example
+#### Example
 
 Input:
 
@@ -334,9 +325,7 @@ World Cup
 
 These are converted into candidate concepts.
 
----
-
-## Step 3: Concept Normalization
+### Step 3: Concept Normalization
 
 Extracted concepts are normalized before further processing.
 
@@ -352,9 +341,7 @@ Operations include:
 
 This greatly improves deduplication.
 
----
-
-## Step 4: Concept Validation
+### Step 4: Concept Validation
 
 Not every extracted phrase should become a graph node.
 
@@ -370,9 +357,7 @@ The validation stage removes:
 
 This prevents graph pollution before nodes are created.
 
----
-
-## Step 5: Keyword Extraction (KeyBERT)
+### Step 5: Keyword Extraction (KeyBERT)
 
 While SpaCy identifies named entities, many important concepts never appear as entities.
 
@@ -396,9 +381,7 @@ Cricket World Cup
 
 To solve this, KeyBERT is used.
 
----
-
-### Why KeyBERT?
+#### Why KeyBERT?
 
 Traditional keyword extraction often relies on:
 
@@ -417,9 +400,7 @@ Benefits:
 * Context awareness
 * Better multi-word concepts
 
----
-
-### Configuration
+#### Configuration
 
 The system uses:
 
@@ -430,9 +411,7 @@ diversity=0.9
 
 This encourages diversity and reduces duplicate keywords.
 
----
-
-### Additional Filtering
+#### Additional Filtering
 
 Keywords undergo:
 
@@ -451,9 +430,7 @@ cup
 
 Only the strongest representative keyword is retained.
 
----
-
-## Step 6: Concept Ranking
+### Step 6: Concept Ranking
 
 Extracted concepts are assigned scores.
 
@@ -465,9 +442,7 @@ Entity Type Weight
 Keyword Overlap Score
 ```
 
----
-
-### Entity Type Weight
+#### Entity Type Weight
 
 Certain entity types are naturally more informative.
 
@@ -482,9 +457,7 @@ EVENT
 
 receive higher weights than generic concepts.
 
----
-
-### Keyword Reinforcement
+#### Keyword Reinforcement
 
 Concepts that overlap with high-scoring keywords receive additional score boosts.
 
@@ -504,9 +477,7 @@ cricket world cup
 
 The overlap increases confidence.
 
----
-
-## Step 7: Concept Selection
+### Step 7: Concept Selection
 
 After scoring, concepts are ranked.
 
@@ -518,9 +489,7 @@ Additionally : Multi-word keywords are injected into the final concept set even 
 
 This helps preserve important phrases.
 
----
-
-## Step 8: Wikidata Candidate Retrieval
+### Step 8: Wikidata Candidate Retrieval
 
 The processor does not directly resolve entities.
 
@@ -544,9 +513,7 @@ The processor stores all possibilities.
 
 The graph resolver will later determine the correct meaning.
 
----
-
-## Step 9: Local Wikidata Cache
+### Step 9: Local Wikidata Cache
 
 Repeated Wikidata requests are expensive.
 
@@ -576,9 +543,8 @@ Benefits:
 * Reduced API usage
 * Better rate-limit handling
 
----
 
-## Step 10: Candidate Set Creation
+### Step 10: Candidate Set Creation
 
 The final output of the processor is:
 
@@ -611,7 +577,6 @@ Entity disambiguation is performed later by the graph-based resolver using neigh
 
 The graph is the core data structure of the system.
 
----
 
 ## Entity Nodes
 
@@ -625,7 +590,6 @@ India
 Cricket
 ```
 
----
 
 ## Relationship Edges
 
@@ -644,7 +608,6 @@ graph LR
     classDef dark fill:#666666,color:#ffffff,stroke:#333333,stroke-width:2px
 ```
 
----
 ## Entity Node Schema
 
 Every extracted concept is represented as an entity node.
@@ -699,7 +662,6 @@ Every extracted concept is represented as an entity node.
 | source_counts | Per-source occurrence statistics                     |
 | trend_ids     | Set of trend identifiers contributing to the node    |
 
----
 
 ## Entity Edge Schema
 
@@ -730,7 +692,6 @@ Relationships between co-occurring entities.
 | last_seen     | Timestamp of most recent occurrence |
 | source_counts | Per-source co-occurrence statistics |
 
----
 
 ## Tag Node Schema
 
@@ -763,7 +724,6 @@ Semantic category nodes used for hierarchical classification.
 | children_count | Number of direct child tags                                    |
 | entity_count   | Number of entities associated with this tag or its descendants |
 
----
 
 ## Parent Tag Edge Schema
 
@@ -774,8 +734,6 @@ Represents hierarchical relationships between tags.
     "relation": "parent_tag"
 }
 ```
-
----
 
 ## Entity Tag Edge Schema
 
@@ -803,7 +761,6 @@ Represents semantic assignments between entities and tags.
 
 One of the most important architectural decisions was introducing graph persistence.
 
----
 
 ## Problem
 
@@ -821,7 +778,6 @@ Graph Rebuilt
 
 All accumulated context disappears.
 
----
 
 ## Solution
 
@@ -876,7 +832,6 @@ Prior Probability
 Neighborhood Coherence
 ```
 
----
 
 ## Resolution Workflow
 
@@ -896,7 +851,6 @@ flowchart TD
     classDef dark fill:#666666,color:#ffffff,stroke:#333333,stroke-width:2px
 ```
 
----
 
 ## Important Design Decision
 
@@ -928,7 +882,6 @@ Virat Kohli
 
 contains limited information.
 
----
 
 ## Solution
 
@@ -952,7 +905,6 @@ Cricket
 World Cup
 ```
 
----
 
 ## Context Generation
 
@@ -977,7 +929,6 @@ Context is built using:
 * Neighbor descriptions
 * Neighbor labels
 
----
 
 ## Tag Matching
 
@@ -1015,7 +966,6 @@ graph LR
     classDef dark fill:#666666,color:#ffffff,stroke:#333333,stroke-width:2px
 ```
 
----
 
 ## Why Hierarchical Tags?
 
@@ -1031,7 +981,6 @@ Benefits:
 
 One of the most important decisions in the project.
 
----
 
 ## Rejected Approach
 
@@ -1053,7 +1002,6 @@ These become graph hubs.
 
 Connected-component approaches become noisy.
 
----
 
 ## Final Approach
 
@@ -1078,7 +1026,6 @@ Benefits:
 
 Without pruning the graph grows forever.
 
----
 
 ## Entity Pruning
 
@@ -1087,8 +1034,6 @@ Entities are removed when:
 ```text
 Current Time - Last Seen > MAX_AGE_DAYS
 ```
-
----
 
 ## Tag Pruning
 
@@ -1132,7 +1077,6 @@ Solution:
 
 Graph-based coherence scoring.
 
----
 
 ## Challenge 2: Weak Tagging
 
@@ -1144,7 +1088,6 @@ Solution:
 
 Neighborhood-aware context generation.
 
----
 
 ## Challenge 3: Infinite Graph Growth
 
@@ -1156,7 +1099,6 @@ Solution:
 
 Timestamp-based pruning.
 
----
 
 ## Challenge 4: Repeated API Calls
 
